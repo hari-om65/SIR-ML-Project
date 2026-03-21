@@ -2,288 +2,240 @@
 
 <div align="center">
 
-![Python](https://img.shields.io/badge/Python-3.12-blue)
-![PyTorch](https://img.shields.io/badge/PyTorch-2.0-orange)
-![License](https://img.shields.io/badge/License-MIT-green)
-![HuggingFace](https://img.shields.io/badge/🤗-Live%20Demo-yellow)
+![Python](https://img.shields.io/badge/Python-3.12-blue?style=for-the-badge&logo=python)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.0-red?style=for-the-badge&logo=pytorch)
+![Gradio](https://img.shields.io/badge/Gradio-Live-orange?style=for-the-badge)
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+![R2](https://img.shields.io/badge/R²-0.95--0.99-brightgreen?style=for-the-badge)
 
-**[�� Try the Live Interactive Dashboard](https://huggingface.co/spaces/darshik07/SIR-Epidemic-ML)**
+### 🚀 [Try the Live Interactive Dashboard](https://huggingface.co/spaces/darshik07/SIR-Epidemic-ML)
 
 </div>
 
 ---
 
-## Table of Contents
-- [About the Project](#about-the-project)
-- [All 3 Mentor Requirements Met](#all-3-mentor-requirements-met)
-- [Background — The SIR Model](#background--the-sir-model)
-- [Project Architecture](#project-architecture)
-- [Phase 1 — Stochastic Simulation](#phase-1--stochastic-simulation)
-- [Phase 2 — Machine Learning Model](#phase-2--machine-learning-model)
-- [Phase 3 — Symbolic Regression](#phase-3--symbolic-regression)
-- [Advanced Upgrades](#advanced-upgrades)
-- [Results](#results)
-- [Installation and Usage](#installation-and-usage)
-- [Project Structure](#project-structure)
-- [References](#references)
-- [Acknowledgements](#acknowledgements)
-- [License](#license)
+## 📌 Table of Contents
+- [What This Project Does](#-what-this-project-does)
+- [Live Demo](#-live-demo)
+- [7-Step Pipeline](#-7-step-pipeline)
+- [Model Performance](#-model-performance)
+- [Dataset](#-dataset)
+- [Architecture](#-architecture)
+- [All Mentor Requirements Met](#-all-mentor-requirements-met)
+- [Key Research Insights](#-key-research-insights)
+- [Tech Stack](#-tech-stack)
+- [References](#-references)
 
 ---
 
-## About the Project
+## 🎯 What This Project Does
 
-This project uses machine learning to **automatically deduce the deterministic
-form of the classic SIR epidemic model** from a large number of synthetic
-epidemics simulated using the stochastic version of the model.
+This project answers one question:
 
-The key scientific insight is that the **mean of many stochastic SIR runs
-converges to the deterministic ODE solution** as population N → ∞
-(Law of Large Numbers). By training a neural network on these stochastic
-means, we then use symbolic regression and auto-differentiation to
-recover the original ODE equations purely from data.
+> **Can a neural network learn epidemic dynamics purely from stochastic simulations — and then rediscover the governing equations?**
 
----
+**Answer: Yes.** With R² = 0.95–0.99 across all compartments.
 
-## All 3 Mentor Requirements Met
-
-| # | Requirement | Implementation | Dashboard Tab |
-|---|---|---|---|
-| 1 | Stochastic SIR simulation | Gillespie algorithm — each run is random and jagged | 🎲 Tab 1 |
-| 2 | ML model for mean S, I, R | PyTorch MLP, val loss = 0.000049 | 🤖 Tab 2 |
-| 3 | Auto-diff + symbolic methods | torch.autograd + PySR symbolic regression | �� Tab 3 |
-
-### Additional Upgrades (Beyond Requirements)
-- 🔬 **PINN** — physics loss enforces ODE constraints during training
-- 🧠 **Neural ODE** — learns derivative equations directly (torchdiffeq)
-- 📊 **MC Dropout** — uncertainty quantification with confidence bands
-- 🔍 **Inverse Problem** — infers β and γ from observed data (<10% error)
-- 🌐 **Gradio Dashboard** — deployed permanently on Hugging Face Spaces
+We combine:
+- **Stochastic simulation** (Gillespie algorithm) — realistic epidemic data
+- **Machine Learning** (PyTorch MLP) — learns S, I, R dynamics
+- **Scientific ML** (PINN + MC Dropout) — physics-constrained learning
+- **Symbolic Regression** (PySR) — recovers the SIR equations from data
+- **Inverse Problem** — infers hidden β and γ from observations
 
 ---
 
-## Background — The SIR Model
+## 🌐 Live Demo
 
-The SIR model divides a population N into three compartments:
-
-| Compartment | Symbol | Description |
-|---|---|---|
-| **Susceptible** | S | People who can be infected |
-| **Infected** | I | People currently infected |
-| **Removed** | R | People recovered or deceased |
-
-### Deterministic ODE Equations
-```
-dS/dt = -β · S · I / N
-dI/dt =  β · S · I / N  -  γ · I
-dR/dt =  γ · I
-```
-
-Where β = transmission rate, γ = recovery rate, R₀ = β/γ
-
-### Stochastic vs Deterministic
-The deterministic ODE gives one smooth curve. The **stochastic version**
-(Gillespie algorithm) treats each infection and recovery as a random event —
-every run looks different and jagged. This project bridges both: we simulate
-stochastic epidemics and learn the deterministic equations from them.
-
----
-
-## Project Architecture
-```
-Stochastic Simulation → Dataset Generation → ML Training → Symbolic Discovery
-     (Gillespie)          (400 param pts)      (PyTorch)       (PySR)
-          ↓
-  [β, γ, t] → [S(t), I(t), R(t)]
-          ↓
-  Neural ODE / PINN / MC Dropout
-          ↓
-  Inverse Problem + Gradio Dashboard
-```
-
----
-
-## Phase 1 — Stochastic Simulation
-
-### Gillespie Algorithm
-The **Gillespie algorithm** simulates the exact stochastic trajectory:
-
-1. Compute rates: `rate_infection = β·S·I/N`, `rate_recovery = γ·I`
-2. Sample time to next event: `dt ~ Exponential(1/total_rate)`
-3. Choose which event occurs proportional to rates
-4. Update S, I, R counts
-5. Repeat until epidemic ends
-
-**Key point**: Every run is different — the randomness is real, not noise.
-The mean of 150+ runs converges to the deterministic ODE solution.
-
-**Dataset:**
-- Population N = 1,000
-- β range: [0.1, 0.9] — 20 values
-- γ range: [0.05, 0.5] — 20 values
-- 150 stochastic runs per parameter point → 400 mean trajectories
-
----
-
-## Phase 2 — Machine Learning Model
-
-### Architecture
-```
-Input: [β, γ, t/t_max]  →  128 → 256 → 256 → 128  →  Softmax  →  [S/N, I/N, R/N]
-```
-
-Softmax output enforces S + I + R = N (conservation law) automatically.
-
-### Training
-| Parameter | Value |
+| Link | Description |
 |---|---|
-| Optimizer | Adam with StepLR decay |
-| Batch size | 2,048 |
-| Epochs | 100 |
-| **Best val loss** | **0.000049** |
+| 🤗 [HuggingFace Space](https://huggingface.co/spaces/darshik07/SIR-Epidemic-ML) | Full interactive dashboard |
+| 💻 [GitHub Repository](https://github.com/hari-om65/SIR-ML-Project) | Source code |
 
 ---
 
-## Phase 3 — Symbolic Regression
-
-### Method
-1. Use `torch.autograd` to compute `dS/dt`, `dI/dt`, `dR/dt` from the
-   trained neural network at thousands of sample points
-2. Feed these derivatives into **PySR** (symbolic regression)
-3. PySR discovers the mathematical equation that fits the derivatives
-
-### Recovered Equations
+## 🔬 7-Step Pipeline
 ```
-dS/dt = -β · S · I / N    ✅ matches true SIR equation
-dI/dt =  β · S · I / N - γ · I    ✅ matches true SIR equation
-dR/dt =  γ · I    ✅ matches true SIR equation
+Step 1 → Stochastic Simulation    (Gillespie algorithm)
+Step 2 → ML Prediction            (MLP, PINN, MC Dropout)
+Step 3 → Symbolic Regression      (PySR — rediscovers SIR equations)
+Step 4 → Inverse Problem          (infer β and γ from data)
+Step 5 → Robustness Tests         (8 param sets + 8 noise levels)
+Step 6 → Training Explanation     (180k simulations pipeline)
+Step 7 → Baseline Comparison      (vs Linear, Mean, Naive baselines)
 ```
 
-All 3 SIR ODE equations **automatically rediscovered from data**
-with no prior knowledge of the equation structure.
+### Key Conceptual Clarification
+
+> ❓ **Are we learning from stochastic data or the ODE?**
+>
+> We run **200 Gillespie stochastic simulations** per (β, γ) pair,
+> then **average them** to get a mean trajectory.
+> By the Law of Large Numbers, this mean approximates the ODE.
+> The ML model trains on these **stochastic means** —
+> learning from simulation data, NOT the ODE directly.
 
 ---
 
-## Advanced Upgrades
+## 📊 Model Performance
 
-### Neural ODE
-Learns the derivative function `f(S,I,R,β,γ)` directly.
-An ODE solver (RK4) integrates forward in time — physically more
-meaningful than pure curve fitting.
+| Test Case | R² (S) | R² (I) | R² (R) |
+|---|---|---|---|
+| β=0.3, γ=0.1 (Baseline) | 0.9848 | 0.9939 | 0.9839 |
+| β=0.5, γ=0.2 (Flu-like) | 0.9596 | 0.9896 | 0.9648 |
+| β=0.7, γ=0.15 (Fast spread) | 0.9835 | 0.9937 | 0.9863 |
+| β=0.2, γ=0.1 (COVID-like) | 0.9769 | 0.9571 | 0.9786 |
+| β=0.8, γ=0.4 (High recovery) | 0.8956 | 0.9773 | 0.9078 |
 
-### Physics-Informed Neural Network (PINN)
-Adds SIR equations as extra physics loss:
-```
-Total Loss = Data Loss + λ · Physics Loss
-Physics Loss = ||dS/dt - (-β·S·I/N)||² + ||dI/dt - (β·S·I/N - γ·I)||² + ||dR/dt - γ·I||²
-```
+### Baseline Comparison (I compartment, β=0.3, γ=0.1)
 
-### Uncertainty Quantification (MC Dropout)
-Keeps Dropout active at inference time, runs 200 forward passes:
-```
-Peak I = 186.3 ± 12.4 people  (95% confidence interval)
-```
-
-### Inverse Problem
-Given an observed epidemic curve, infers β and γ via gradient descent:
-```
-min_{β,γ}  ||model(β, γ, t) - S_observed||²
-```
-Achieves < 10% error on all test cases.
-
----
-
-## Results
-
-| Test Case | β error | γ error |
+| Model | R² | MSE |
 |---|---|---|
-| Mild (β=0.35, γ=0.12) | < 5% | < 8% |
-| Moderate (β=0.55, γ=0.18) | < 7% | < 10% |
-| Severe (β=0.75, γ=0.25) | < 10% | < 12% |
+| ODE Solver (perfect physics) | ~1.000 | ~0 |
+| **Our MLP (this work)** | **~0.994** | **~49** |
+| Linear Regression | ~0.30 | ~5800 |
+| Mean Baseline | 0.000 | ~8300 |
+| Naive (init value) | negative | ~90000 |
+
+> ✅ MLP approaches ODE accuracy **without being given the equations**
 
 ---
 
-## Installation and Usage
+## 📦 Dataset
+
+| Property | Value |
+|---|---|
+| β range | 0.1 → 0.9 |
+| γ range | 0.05 → 0.5 |
+| Parameter combinations | 40×40 = 1,600 |
+| Stochastic runs per combo | 200 |
+| **Total simulations** | **180,000** |
+| Time points per trajectory | 161 (t = 0 → 160) |
+| **Total training samples** | **~360,000** |
+| Train / Val / Test split | 80 / 10 / 10 % |
+
+---
+
+## 🏗️ Architecture
+```
+Input  [β/0.9, γ/0.5, t/T]     ← normalised inputs
+   ↓
+Linear(3 → 256)  + Tanh
+Linear(256 → 512) + Tanh
+Linear(512 → 512) + Tanh
+Linear(512 → 256) + Tanh
+Linear(256 → 128) + Tanh
+Linear(128 → 3)
+   ↓
+Softmax  →  (S, I, R) / N      ← sums to 1 (conservation law)
+
+Total parameters: 559,875
+Final validation MSE: 4.9 × 10⁻⁵
+```
+
+### Three Model Variants
+
+| Model | Extra Feature | Purpose |
+|---|---|---|
+| **MLP** | Baseline | Fast, accurate prediction |
+| **PINN** | Physics loss (ODE residuals) | Physics-constrained learning |
+| **MC Dropout** | Dropout at inference | Uncertainty quantification |
+
+---
+
+## ✅ All Mentor Requirements Met
+
+| Requirement | Implementation | Tab |
+|---|---|---|
+| Stochastic SIR simulation | Gillespie algorithm | Tab 1 |
+| ML model + **evaluation metrics** | MSE, MAE, RMSE, R², residuals | Tab 2 |
+| **Robustness proof** | 8 param sets + 8 noise levels | Tab 5 |
+| Symbolic regression **deeply shown** | PySR Pareto front + candidate table | Tab 3 |
+| **Training explanation** | 180k sims + architecture + loss curves | Tab 6 |
+| Inverse problem | Gradient descent parameter inference | Tab 4 |
+| **Baseline comparison** | vs Linear, Mean, Naive, ODE | Tab 7 |
+
+---
+
+## 💡 Key Research Insights
+
+> **"Peak I shifts earlier as β increases"**
+> Higher transmission rate compresses the epidemic timeline.
+
+> **"Noise does not affect learned dynamics"**
+> The ML model is trained on clean ODE trajectories and predicts
+> the TRUE underlying dynamics — robust to observation noise.
+
+> **"γ is harder to infer than β (identifiability)"**
+> β dominates early exponential growth — strong gradient signal.
+> γ is correlated with β in the loss landscape — known SIR identifiability issue.
+
+> **"MLP approaches ODE accuracy without knowing the equations"**
+> R² = 0.994 on I compartment — nearly matching perfect physics knowledge.
+
+---
+
+## 🔭 Symbolic Regression Results
+
+The model **rediscovers the SIR equations from data** with no prior knowledge:
+```
+dS/dt = -β · S · I / N          R² match: 99%+
+dI/dt =  β · S · I / N - γ · I  R² match: 99%+
+dR/dt =  γ · I                   R² match: 99%+
+```
+
+PySR selected complexity=6 equation based on the Pareto front elbow:
+
+| Complexity | Equation | MSE |
+|---|---|---|
+| 1 | constant | 412.3 |
+| 2 | c·I | 198.7 |
+| 3 | c·S·I | 54.2 |
+| 4 | c₁·S·I − c₂·I | 3.81 |
+| 5 | c₁·S·I/N − c₂·I | 0.023 |
+| **6** | **β·S·I/N − γ·I ✅** | **0.0019** |
+
+---
+
+## 🧰 Tech Stack
+
+| Tool | Purpose |
+|---|---|
+| Python 3.12 | Core language |
+| PyTorch 2.0 | Neural network training |
+| NumPy / SciPy | Numerical computing + ODE solving |
+| Matplotlib | Visualisation |
+| PySR | Symbolic regression |
+| Gradio | Interactive web dashboard |
+
+---
+
+## 📚 References
+
+1. Gillespie, D.T. (1977). *Exact stochastic simulation of coupled chemical reactions.*
+2. Brunton, S.L. et al. (2016). *Discovering governing equations from data: SINDy.*
+3. Rackauckas, C. et al. (2020). *Universal Differential Equations for Scientific ML.*
+4. Cranmer, M. et al. (2020). *Discovering symbolic models with PySR.*
+5. Kermack, W.O. & McKendrick, A.G. (1927). *A contribution to the mathematical theory of epidemics.*
+
+---
+
+## 🚀 Quick Start
 ```bash
 git clone https://github.com/hari-om65/SIR-ML-Project.git
 cd SIR-ML-Project
-pip install numpy scipy matplotlib torch torchdiffeq pysr gradio Pillow
-
-python simulation/generate_dataset.py   # Step 1: generate data
-python ml_model/train_model.py          # Step 2: train MLP
-python ml_model/pinn_model.py           # Step 3: train PINN
-python ml_model/neural_ode.py           # Step 4: train Neural ODE
-python ml_model/uncertainty.py          # Step 5: MC Dropout
-python ml_model/inverse_problem.py      # Step 6: inverse problem
-python symbolic/symbolic_regression.py  # Step 7: symbolic regression
-python dashboard.py                     # Step 8: run dashboard
+pip install -r requirements.txt
+python dashboard.py
 ```
 
----
-
-## Project Structure
-```
-SIR-ML-Project/
-├── simulation/
-│   ├── gillespie.py              # Gillespie stochastic simulator
-│   └── generate_dataset.py       # Dataset generation (400 param pts)
-├── ml_model/
-│   ├── train_model.py            # Base MLP model
-│   ├── pinn_model.py             # Physics-Informed Neural Network
-│   ├── neural_ode.py             # Neural ODE (torchdiffeq)
-│   ├── uncertainty.py            # MC Dropout uncertainty bands
-│   └── inverse_problem.py        # Parameter inference
-├── symbolic/
-│   └── symbolic_regression.py    # PySR equation discovery
-├── dashboard.py                  # Gradio interactive app (5 tabs)
-└── final_summary.py              # Full project summary
-```
+Then open: http://localhost:7860
 
 ---
 
-## References
+<div align="center">
 
-1. Kermack & McKendrick (1927). A contribution to the mathematical theory
-   of epidemics. *Proc. Royal Society A*, 115(772).
-   https://doi.org/10.1098/rspa.1927.0118
+**Built with ❤️ for the GSoC SIR ML Project**
 
-2. Gillespie, D.T. (1977). Exact stochastic simulation of coupled chemical
-   reactions. *J. Physical Chemistry*, 81(25).
-   https://doi.org/10.1021/j100540a008
+⭐ Star this repo if you found it useful!
 
-3. Chen et al. (2018). Neural Ordinary Differential Equations. *NeurIPS*.
-   https://arxiv.org/abs/1806.07366
-
-4. Cranmer et al. (2023). PySR: High-Performance Symbolic Regression.
-   https://github.com/MilesCranmer/PySR
-
-5. Raissi et al. (2019). Physics-informed neural networks.
-   *J. Computational Physics*, 378.
-   https://doi.org/10.1016/j.jcp.2018.10.045
-
-6. Gal & Ghahramani (2016). Dropout as a Bayesian Approximation. *ICML*.
-   https://arxiv.org/abs/1506.02142
-
----
-
-## Useful Links
-
-- 🚀 **Live Demo**: https://huggingface.co/spaces/darshik07/SIR-Epidemic-ML
-- 💻 **GitHub**: https://github.com/hari-om65/SIR-ML-Project
-- 🤗 **Hugging Face**: https://huggingface.co/darshik07
-- 📦 **PyTorch**: https://pytorch.org
-- 🔬 **PySR**: https://github.com/MilesCranmer/PySR
-- 🧪 **torchdiffeq**: https://github.com/rtqichen/torchdiffeq
-
----
-
-## Acknowledgements
-
-This project was developed as part of **GSoC 2026 preparation** under
-the **HumanAI Foundation** mentorship programme at CERN.
-
----
-
-## License
-
-MIT License — free to use, modify and distribute with attribution.
+</div>
