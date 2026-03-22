@@ -1,3 +1,4 @@
+from pysr import PySRRegressor
 import torch
 import torch.nn as nn
 import numpy as np
@@ -9,11 +10,10 @@ from scipy.integrate import odeint
 import sys, io
 from PIL import Image
 
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'simulation'))
+sys.path.insert(0, '/teamspace/studios/this_studio/sir_ml_project/simulation')
 from gillespie import run_gillespie_sir, mean_sir_trajectory
 
-BASE = os.path.dirname(os.path.abspath(__file__))
+BASE  = '/teamspace/studios/this_studio/sir_ml_project'
 N     = 1000.0
 t_max = 160.0
 t_grid = np.load(f'{BASE}/data/t_grid.npy').astype(np.float32)
